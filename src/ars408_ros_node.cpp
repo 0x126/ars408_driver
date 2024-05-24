@@ -19,14 +19,14 @@
 #include <string>
 #include <unordered_map>
 
-PeContinentalArs408Node::PeContinentalArs408Node(const rclcpp::NodeOptions & node_options)
-: Node("ars408_node", node_options)
+PeContinentalArs408Node::PeContinentalArs408Node(drivers::socketcan::SocketCanReceiverNode *node)
 {
+  can_receiver_node_ = node;
   GenerateUUIDTable();
   Run();
 }
 
-void PeContinentalArs408Node::CanFrameCallback(const can_msgs::msg::Frame::SharedPtr can_msg)
+void PeContinentalArs408Node::CanFrameCallback(const can_msgs::msg::Frame *can_msg)
 {
   if (!can_msg->data.empty()) {
     can_data_ = can_msg;
@@ -120,10 +120,10 @@ void PeContinentalArs408Node::RadarDetectedObjectsCallback(
   }
 
   if (publish_radar_track_) {
-    publisher_radar_tracks_->publish(output_objects);
+    can_receiver_node_->publisher_radar_tracks_->publish(output_objects);
   }
   if (publish_radar_scan_) {
-    publisher_radar_scan_->publish(output_scan);
+    can_receiver_node_->publisher_radar_scan_->publish(output_scan);
   }
 }
 
@@ -145,25 +145,14 @@ void PeContinentalArs408Node::GenerateUUIDTable()
 
 void PeContinentalArs408Node::Run()
 {
-  output_frame_ = this->declare_parameter<std::string>("output_frame", "ars408");
-  publish_radar_track_ = this->declare_parameter<bool>("publish_radar_track", true);
-  publish_radar_scan_ = this->declare_parameter<bool>("publish_radar_scan", false);
-  sequential_publish_ = this->declare_parameter<bool>("sequential_publish", false);
-  size_x_ = this->declare_parameter<double>("size_x", 1.8);
-  size_y_ = this->declare_parameter<double>("size_y", 1.8);
+  output_frame_ = can_receiver_node_->output_frame_;
+  publish_radar_track_ = can_receiver_node_->publish_radar_track_;
+  publish_radar_scan_ = can_receiver_node_->publish_radar_scan_;
+  sequential_publish_ = can_receiver_node_->sequential_publish_;
+  size_x_ = can_receiver_node_->size_x_;
+  size_y_ = can_receiver_node_->size_y_;
 
   ars408_driver_.RegisterDetectedObjectsCallback(
     std::bind(&PeContinentalArs408Node::RadarDetectedObjectsCallback, this, std::placeholders::_1),
     sequential_publish_);
-
-  subscription_ = this->create_subscription<can_msgs::msg::Frame>(
-    "~/input/frame", 10,
-    std::bind(&PeContinentalArs408Node::CanFrameCallback, this, std::placeholders::_1));
-
-  publisher_radar_tracks_ =
-    this->create_publisher<radar_msgs::msg::RadarTracks>("~/output/objects", 10);
-  publisher_radar_scan_ = this->create_publisher<radar_msgs::msg::RadarScan>("~/output/scan", 10);
 }
-
-#include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(PeContinentalArs408Node)

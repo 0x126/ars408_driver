@@ -16,6 +16,10 @@ ament_auto_find_build_dependencies()
 
 # Driver Library
 ament_auto_add_library(pe_ars408_parser SHARED
+  src/socket_can_common.cpp
+  src/socket_can_id.cpp
+  src/socket_can_receiver.cpp
+  src/socket_can_receiver_node.cpp
   src/ars408_driver.cpp
 )
 
@@ -29,7 +33,7 @@ target_link_libraries(pe_ars408_node_component
 )
 
 rclcpp_components_register_node(pe_ars408_node_component
-  PLUGIN "PeContinentalArs408Node"
+  PLUGIN "drivers::socketcan::SocketCanReceiverNode"
   EXECUTABLE pe_ars408_node
 )
 

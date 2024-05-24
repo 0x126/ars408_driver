@@ -11,13 +11,13 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
   <depend>can_msgs</depend>
+  <depend>ros2_socketcan_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>rclcpp_lifecycle</depend>
   <depend>sensor_msgs</depend>
   <depend>unique_identifier_msgs</depend>
   <depend>radar_msgs</depend>
-
-  <exec_depend>ros2_socketcan</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

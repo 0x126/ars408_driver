@@ -16,6 +16,7 @@
 #define ARS408_ROS__ARS408_ROS_NODE_HPP_
 
 #include "ars408_ros/ars408_driver.hpp"
+#include "ros2_socketcan/socket_can_receiver_node.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "can_msgs/msg/frame.hpp"
@@ -28,14 +29,17 @@
 #include <unordered_map>
 #include <vector>
 
-class PeContinentalArs408Node : public rclcpp::Node
+namespace drivers
 {
-  rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr subscriber_can_raw_;
-  rclcpp::Subscription<can_msgs::msg::Frame>::SharedPtr subscription_;
-  rclcpp::Publisher<radar_msgs::msg::RadarTracks>::SharedPtr publisher_radar_tracks_;
-  rclcpp::Publisher<radar_msgs::msg::RadarScan>::SharedPtr publisher_radar_scan_;
+namespace socketcan
+{
+  class SocketCanReceiverNode;
+}
+}
 
-  can_msgs::msg::Frame::ConstSharedPtr can_data_;
+class PeContinentalArs408Node
+{
+  const can_msgs::msg::Frame *can_data_;
 
   std::string output_frame_;
   bool publish_radar_track_;
@@ -50,7 +54,8 @@ class PeContinentalArs408Node : public rclcpp::Node
 
   ars408::Ars408Driver ars408_driver_{};
 
-  void CanFrameCallback(const can_msgs::msg::Frame::SharedPtr can_msg);
+  drivers::socketcan::SocketCanReceiverNode *can_receiver_node_;
+
   void GenerateUUIDTable();
 
   radar_msgs::msg::RadarTrack ConvertRadarObjectToRadarTrack(const ars408::RadarObject & in_object);
@@ -62,10 +67,11 @@ class PeContinentalArs408Node : public rclcpp::Node
   static unique_identifier_msgs::msg::UUID GenerateRandomUUID();
 
 public:
-  explicit PeContinentalArs408Node(const rclcpp::NodeOptions & node_options);
+  explicit PeContinentalArs408Node(drivers::socketcan::SocketCanReceiverNode *node);
   void RadarDetectedObjectsCallback(
     const std::unordered_map<uint8_t, ars408::RadarObject> & detected_objects);
   void Run();
+  void CanFrameCallback(const can_msgs::msg::Frame *can_msg);
 };
 
 #endif  // ARS408_ROS__ARS408_ROS_NODE_HPP_
