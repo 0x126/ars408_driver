@@ -163,6 +163,7 @@ private:
 
   int32_t m_file_descriptor;
   bool m_enable_fd;
+  const int num_batch = 16;
 };  // class SocketCanReceiver
 
 }  // namespace socketcan

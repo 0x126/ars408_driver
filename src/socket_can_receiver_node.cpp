@@ -81,7 +81,7 @@ LNI::CallbackReturn SocketCanReceiverNode::on_configure(const lc::State & state)
   RCLCPP_DEBUG(this->get_logger(), "Receiver successfully configured.");
 
   if (!enable_fd_) {
-    frames_pub_ = this->create_publisher<can_msgs::msg::Frame>("from_can_bus", 500);
+    frames_pub_ = this->create_publisher<batch_can_msgs::msg::BatchFrames>("from_can_bus", 500);
   } else {
     fd_frames_pub_ =
       this->create_publisher<ros2_socketcan_msgs::msg::FdFrame>("from_can_bus_fd", 500);
@@ -149,6 +149,8 @@ void SocketCanReceiverNode::receive()
   CanId receive_id{};
 
   if (!enable_fd_) {
+    static int num_accumulated;
+    static batch_can_msgs::msg::BatchFrames batch_frame_msg;
     can_msgs::msg::Frame frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
     frame_msg.header.frame_id = "can";
 
@@ -181,7 +183,12 @@ void SocketCanReceiverNode::receive()
       frame_msg.is_error = (receive_id.frame_type() == FrameType::ERROR);
       frame_msg.dlc = receive_id.length();
       ars408node->CanFrameCallback(&frame_msg);
-      frames_pub_->publish(std::move(frame_msg));
+      batch_frame_msg.frames[num_accumulated] = frame_msg;
+      num_accumulated++;
+      if (num_accumulated == num_batch_publish) {
+        frames_pub_->publish(std::move(batch_frame_msg));
+        num_accumulated = 0;
+      }
     }
   } else {
     ros2_socketcan_msgs::msg::FdFrame fd_frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);

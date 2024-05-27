@@ -136,28 +136,35 @@ CanId SocketCanReceiver::receive(void * const data, const std::chrono::nanosecon
 
   wait(timeout);
   // Read
-  struct can_frame frame;
-  const auto nbytes = read(m_file_descriptor, &frame, sizeof(frame));
+  static ssize_t nbytes;
+  static int index;
+  struct can_frame frame[num_batch];
+  if (!nbytes) {
+  nbytes = read(m_file_descriptor, &frame, sizeof(frame));
   // Checks
   if (nbytes < 0) {
     throw std::runtime_error{strerror(errno)};
   }
-  if (static_cast<std::size_t>(nbytes) < sizeof(frame)) {
+  if (static_cast<std::size_t>(nbytes) < sizeof(struct can_frame)) {
     throw std::runtime_error{"read: incomplete CAN frame"};
   }
-  if (static_cast<std::size_t>(nbytes) != sizeof(frame)) {
+  if (static_cast<std::size_t>(nbytes) % sizeof(struct can_frame)) {
     throw std::logic_error{"Message was wrong size"};
   }
+  index = 0;
+  }
   // Write
-  const auto data_length = static_cast<CanId::LengthT>(frame.can_dlc);
-  (void)std::memcpy(data, static_cast<void *>(&frame.data[0U]), data_length);
+  const auto data_length = static_cast<CanId::LengthT>(frame[index].can_dlc);
+  (void)std::memcpy(data, static_cast<void *>(&frame[index].data[0U]), data_length);
 
   // get bus timestamp
   struct timeval tv;
   ioctl(m_file_descriptor, SIOCGSTAMP, &tv);
   uint64_t bus_time = from_timeval(tv);
 
-  return CanId{frame.can_id, bus_time, data_length};
+  index++;
+  nbytes -= sizeof(struct can_frame);
+  return CanId{frame[index-1].can_id, bus_time, data_length};
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -35,6 +35,7 @@
 #include "radar_msgs/msg/radar_tracks.hpp"
 #include "ros2_socketcan_msgs/msg/fd_frame.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
+#include "batch_can_msgs/msg/batch_frames.hpp"
 
 class PeContinentalArs408Node;
 
@@ -88,7 +89,7 @@ public:
 
 private:
   std::string interface_;
-  std::shared_ptr<lc::LifecyclePublisher<can_msgs::msg::Frame>> frames_pub_;
+  std::shared_ptr<lc::LifecyclePublisher<batch_can_msgs::msg::BatchFrames>> frames_pub_;
   std::shared_ptr<lc::LifecyclePublisher<ros2_socketcan_msgs::msg::FdFrame>> fd_frames_pub_;
   std::unique_ptr<SocketCanReceiver> receiver_;
   std::unique_ptr<std::thread> receiver_thread_;
@@ -97,6 +98,7 @@ private:
   bool use_bus_time_;
 
   PeContinentalArs408Node *ars408node;
+  const int num_batch_publish = 16;
 };
 }  // namespace socketcan
 }  // namespace drivers
