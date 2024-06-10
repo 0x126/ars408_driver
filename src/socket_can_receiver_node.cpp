@@ -149,8 +149,8 @@ void SocketCanReceiverNode::receive()
   CanId receive_id{};
 
   if (!enable_fd_) {
-    static int num_accumulated;
-    static batch_can_msgs::msg::BatchFrames batch_frame_msg;
+    int num_accumulated;
+    batch_can_msgs::msg::BatchFrames batch_frame_msg;
     can_msgs::msg::Frame frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
     frame_msg.header.frame_id = "can";
 
