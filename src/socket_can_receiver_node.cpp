@@ -149,7 +149,7 @@ void SocketCanReceiverNode::receive()
   CanId receive_id{};
 
   if (!enable_fd_) {
-    int num_accumulated;
+    int num_accumulated = 0;
     batch_can_msgs::msg::BatchFrames batch_frame_msg;
     can_msgs::msg::Frame frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
     frame_msg.header.frame_id = "can";
