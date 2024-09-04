@@ -33,9 +33,7 @@
 #include "can_msgs/msg/frame.hpp"
 #include "radar_msgs/msg/radar_scan.hpp"
 #include "radar_msgs/msg/radar_tracks.hpp"
-#include "ros2_socketcan_msgs/msg/fd_frame.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
-#include "batch_can_msgs/msg/batch_frames.hpp"
 
 class PeContinentalArs408Node;
 
@@ -89,8 +87,6 @@ public:
 
 private:
   std::string interface_;
-  std::shared_ptr<lc::LifecyclePublisher<batch_can_msgs::msg::BatchFrames>> frames_pub_;
-  std::shared_ptr<lc::LifecyclePublisher<ros2_socketcan_msgs::msg::FdFrame>> fd_frames_pub_;
   std::unique_ptr<SocketCanReceiver> receiver_;
   std::unique_ptr<std::thread> receiver_thread_;
   std::chrono::nanoseconds interval_ns_;

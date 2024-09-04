@@ -80,13 +80,6 @@ LNI::CallbackReturn SocketCanReceiverNode::on_configure(const lc::State & state)
 
   RCLCPP_DEBUG(this->get_logger(), "Receiver successfully configured.");
 
-  if (!enable_fd_) {
-    frames_pub_ = this->create_publisher<batch_can_msgs::msg::BatchFrames>("from_can_bus", 500);
-  } else {
-    fd_frames_pub_ =
-      this->create_publisher<ros2_socketcan_msgs::msg::FdFrame>("from_can_bus_fd", 500);
-  }
-
   receiver_thread_ = std::make_unique<std::thread>(&SocketCanReceiverNode::receive, this);
 
   return LNI::CallbackReturn::SUCCESS;
@@ -95,13 +88,6 @@ LNI::CallbackReturn SocketCanReceiverNode::on_configure(const lc::State & state)
 LNI::CallbackReturn SocketCanReceiverNode::on_activate(const lc::State & state)
 {
   (void)state;
-
-  if (!enable_fd_) {
-    frames_pub_->on_activate();
-  } else {
-    fd_frames_pub_->on_activate();
-  }
-
   RCLCPP_DEBUG(this->get_logger(), "Receiver activated.");
   return LNI::CallbackReturn::SUCCESS;
 }
@@ -109,13 +95,6 @@ LNI::CallbackReturn SocketCanReceiverNode::on_activate(const lc::State & state)
 LNI::CallbackReturn SocketCanReceiverNode::on_deactivate(const lc::State & state)
 {
   (void)state;
-
-  if (!enable_fd_) {
-    frames_pub_->on_deactivate();
-  } else {
-    fd_frames_pub_->on_deactivate();
-  }
-
   RCLCPP_DEBUG(this->get_logger(), "Receiver deactivated.");
   return LNI::CallbackReturn::SUCCESS;
 }
@@ -123,13 +102,6 @@ LNI::CallbackReturn SocketCanReceiverNode::on_deactivate(const lc::State & state
 LNI::CallbackReturn SocketCanReceiverNode::on_cleanup(const lc::State & state)
 {
   (void)state;
-
-  if (!enable_fd_) {
-    frames_pub_.reset();
-  } else {
-    fd_frames_pub_.reset();
-  }
-
   if (receiver_thread_->joinable()) {
     receiver_thread_->join();
   }
@@ -149,8 +121,6 @@ void SocketCanReceiverNode::receive()
   CanId receive_id{};
 
   if (!enable_fd_) {
-    int num_accumulated = 0;
-    batch_can_msgs::msg::BatchFrames batch_frame_msg;
     can_msgs::msg::Frame frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
     frame_msg.header.frame_id = "can";
 
@@ -183,49 +153,6 @@ void SocketCanReceiverNode::receive()
       frame_msg.is_error = (receive_id.frame_type() == FrameType::ERROR);
       frame_msg.dlc = receive_id.length();
       ars408node->CanFrameCallback(&frame_msg);
-      batch_frame_msg.frames[num_accumulated] = frame_msg;
-      num_accumulated++;
-      if (num_accumulated == num_batch_publish) {
-        frames_pub_->publish(std::move(batch_frame_msg));
-        num_accumulated = 0;
-      }
-    }
-  } else {
-    ros2_socketcan_msgs::msg::FdFrame fd_frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
-    fd_frame_msg.header.frame_id = "can";
-
-    while (rclcpp::ok()) {
-      if (this->get_current_state().id() != State::PRIMARY_STATE_ACTIVE) {
-        std::this_thread::sleep_for(100ms);
-        continue;
-      }
-
-      fd_frame_msg.data.resize(64);
-
-      try {
-        receive_id = receiver_->receive_fd(fd_frame_msg.data.data<void>(), interval_ns_);
-      } catch (const std::exception & ex) {
-        RCLCPP_WARN_THROTTLE(
-          this->get_logger(), *this->get_clock(), 1000,
-          "Error receiving CAN FD message: %s - %s",
-          interface_.c_str(), ex.what());
-        continue;
-      }
-
-      fd_frame_msg.data.resize(receive_id.length());
-
-      if (use_bus_time_) {
-        fd_frame_msg.header.stamp =
-          rclcpp::Time(static_cast<int64_t>(receive_id.get_bus_time() * 1000U));
-      } else {
-        fd_frame_msg.header.stamp = this->now();
-      }
-
-      fd_frame_msg.id = receive_id.identifier();
-      fd_frame_msg.is_extended = receive_id.is_extended();
-      fd_frame_msg.is_error = (receive_id.frame_type() == FrameType::ERROR);
-      fd_frame_msg.len = receive_id.length();
-      fd_frames_pub_->publish(std::move(fd_frame_msg));
     }
   }
 }
